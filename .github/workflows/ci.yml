@@ -26,3 +26,6 @@ jobs:
 
       - name: Check the evaluation set is well-formed
         run: python eval/check_questions.py
+
+      - name: Check the Bicep template compiles
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null

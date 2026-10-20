@@ -34,7 +34,7 @@ GC Pay Agent answers these questions in plain language:
 - **Citations.** Every answer names the agreement and article it relied on, and the client lists the source documents.
 - **Clarifying questions.** When an answer depends on details the user hasn't given, such as the agreement, group, level or years of service, the agent asks rather than guesses.
 - **Exact figures.** Rates and amounts are quoted as written in the agreement, never rounded or estimated.
-- **Reproducible.** One script provisions the Azure resources; two scripts load the documents and publish a new, versioned agent.
+- **Reproducible.** One command provisions the Azure resources, either as a step-by-step script or as a declarative Bicep template; two scripts load the documents and publish a new, versioned agent.
 
 The current release covers the **Program and Administrative Services (PA)**, **Economics and Social Science Services (EC)** and **Information Technology (IT)** agreements. Additional agreements can be added with a one-line change.
 
@@ -63,7 +63,7 @@ You: And after 16 years?
 ```mermaid
 flowchart LR
   subgraph WS["Local workstation"]
-    S1["setup-azure.ps1<br/>provisioning"]
+    S1["setup-azure.ps1 or<br/>infra/main.bicep<br/>provisioning"]
     S2["get_agreements.py<br/>acquisition and cleaning"]
     S3["create_agent.py<br/>loading and publishing"]
     S4["ask.py<br/>client"]
@@ -129,21 +129,34 @@ sequenceDiagram
 | Model | Azure OpenAI deployment (`gpt-5-mini`, GlobalStandard) | Generates answers from retrieved passages |
 | Client | `ask.py` | Single-question and conversational access from the terminal |
 | Identity | Microsoft Entra ID, Azure RBAC | Keyless authentication; data-plane authorization |
+| Provisioning | `setup-azure.ps1` or `infra/main.bicep` | Create the platform resources and the data-plane role assignment |
 | Platform | Resource group, Foundry resource, Foundry project | Hosting, quotas, billing boundary |
 
 ## How it works
 
 ### 1. Provisioning
 
-`setup-azure.ps1` creates every Azure resource the agent depends on, using the Azure CLI:
+The agent depends on five Azure resources:
 
 1. A resource group.
 2. A Foundry resource (`kind: AIServices`) with a system-assigned managed identity, a custom subdomain and project management enabled.
 3. A Foundry project inside the resource.
 4. A model deployment (`gpt-5-mini`, GlobalStandard SKU) with configurable capacity in thousands of tokens per minute.
-5. A **Foundry User** role assignment for the signed-in user at project scope, granting data-plane access to create and invoke agents.
+5. A **Foundry User** role assignment at project scope, granting data-plane access to create and invoke agents.
 
-The script is idempotent. Each step checks for an existing resource before creating it, and the deployment's capacity is reconciled to the requested value on every run. The Foundry resource name is derived from the subscription ID, so repeated runs always target the same resources. On completion, the script writes the project endpoint and deployment name to `.env`.
+They are defined twice, in the two common styles of infrastructure as code. Both produce the same resources with the same names, so either can create the environment or manage one the other created.
+
+| | `setup-azure.ps1` (imperative) | `infra/main.bicep` (declarative) |
+| --- | --- | --- |
+| **Approach** | Runs Azure CLI commands in order; each step checks whether its resource already exists | Describes the desired end state; Azure Resource Manager works out what to create or change |
+| **Re-running** | Reuses existing resources and reconciles the model capacity | Compares the template with what exists and applies only the differences |
+| **Key-based access** | Left at the service default | Disabled (`disableLocalAuth`), so Microsoft Entra ID is the only way in |
+| **Role assignment** | The signed-in user | The signed-in user by default, or any user, group or service principal through parameters |
+| **Suited to** | Reading top to bottom, learning and quick changes | Team environments, deployment pipelines and code review of infrastructure changes |
+
+`infra/deploy.ps1` wraps the Bicep deployment: it creates the resource group, skips the role assignment if the role is already held, deploys the template and writes `.env` from the template's outputs. Either way, the Foundry resource name is derived from the subscription ID, so repeated runs always target the same resources, and the project endpoint and deployment name end up in `.env`.
+
+Neither approach manages the vector store, the documents or the agent versions. Those are data-plane objects inside the project, not Azure resources, so `create_agent.py` creates them. Infrastructure as code manages the control plane and application code manages data-plane content, the same split the project uses for permissions.
 
 ### 2. Document acquisition and cleaning
 
@@ -222,7 +235,8 @@ python eval/run_eval.py --ids pa-01 it-06  # specific questions
 | SDKs | `azure-ai-projects` 2.x, OpenAI Python client, `azure-identity` |
 | Ingestion | Python, `requests`, Beautiful Soup |
 | Evaluation | Python, model-graded correctness, deterministic citation checks |
-| Provisioning | PowerShell, Azure CLI |
+| Provisioning | Bicep (declarative), PowerShell with the Azure CLI (imperative) |
+| CI | GitHub Actions: Python checks, test-set validation, Bicep compilation |
 | Identity | Microsoft Entra ID, Azure RBAC (Foundry User role) |
 
 ## Getting started
@@ -240,9 +254,10 @@ python eval/run_eval.py --ids pa-01 it-06  # specific questions
 git clone https://github.com/<your-username>/gc-pay-agent.git
 cd gc-pay-agent
 
-# Sign in and provision Azure resources (writes .env)
+# Sign in and provision Azure resources (writes .env). Use either one:
 az login
-.\setup-azure.ps1
+.\setup-azure.ps1           # imperative: Azure CLI, step by step
+.\infra\deploy.ps1          # declarative: Bicep template
 
 # Python environment (any version from 3.10 to 3.13)
 py -3.12 -m venv .venv
@@ -261,11 +276,20 @@ python create_agent.py
 .\setup-azure.ps1 -Location eastus2                             # different region
 .\setup-azure.ps1 -ModelName <name> -ModelVersion <version>     # different model
 .\setup-azure.ps1 -Capacity 100                                 # higher rate limit (thousands of tokens per minute)
+
+.\infra\deploy.ps1 -Capacity 100                                # the same, with Bicep
+```
+
+To grant access to a service principal, such as a deployment pipeline, deploy the template directly with that principal's object ID:
+
+```powershell
+az deployment group create -g rg-gc-pay-agent -f infra/main.bicep `
+  -p principalId=<object-id> principalType=ServicePrincipal
 ```
 
 ## Configuration
 
-`.env` is generated by `setup-azure.ps1` and excluded from version control. `.env.example` documents the expected values.
+`.env` is generated by `setup-azure.ps1` or `infra/deploy.ps1` and excluded from version control. `.env.example` documents the expected values.
 
 | Variable | Description | Example |
 | --- | --- | --- |
@@ -290,13 +314,19 @@ Agent behaviour is configured in [`agent/instructions.md`](agent/instructions.md
 
 ```text
 gc-pay-agent/
+├── .github/workflows/
+│   └── ci.yml              # Checks run on every push and pull request
 ├── agent/
 │   └── instructions.md     # Agent instructions (system prompt)
 ├── eval/
 │   ├── questions.yaml      # Test set with verified expected answers
 │   ├── run_eval.py         # Runs and grades the test set
+│   ├── check_questions.py  # Validates the test set (runs in CI)
 │   └── results/            # Run logs and summaries
-├── setup-azure.ps1         # Provisions Azure resources; writes .env
+├── infra/
+│   ├── main.bicep          # Azure resources, declarative
+│   └── deploy.ps1          # Deploys main.bicep; writes .env
+├── setup-azure.ps1         # Azure resources, imperative; writes .env
 ├── get_agreements.py       # Acquires and cleans the agreements into docs/
 ├── create_agent.py         # Loads the vector store; publishes agent versions
 ├── ask.py                  # Command-line client
@@ -310,14 +340,14 @@ Generated at runtime and not committed: `docs/` (cleaned agreements), `raw/` (op
 
 ## Security and identity
 
-- **No secrets in code.** All Azure access uses Microsoft Entra ID tokens via `DefaultAzureCredential`. The repository contains no keys or connection strings, and `.env` holds only non-secret identifiers.
+- **No secrets in code.** All Azure access uses Microsoft Entra ID tokens via `DefaultAzureCredential`. The repository contains no keys or connection strings, and `.env` holds only non-secret identifiers. The Bicep template goes a step further and disables key-based access on the Foundry resource, so a leaked key could not be used even if one existed.
 - **Least privilege at the data plane.** Managing Azure resources (control plane) and using the agent (data plane) are authorized separately. Users of the agent need only the Foundry User role on the project.
 - **Public source data.** The knowledge store contains only publicly published agreements; no personal or employee data is processed.
 - **Managed storage.** This configuration uses Foundry's basic agent setup, in which file search storage is managed by Microsoft. Workloads with data residency or classification requirements, such as Protected B, should use the standard agent setup with customer-owned storage and search in a Canadian region, private networking, and logging to a customer-controlled workspace.
 
 ## Operations
 
-- **Rate limits.** The model deployment's capacity is expressed in thousands of tokens per minute. File search adds retrieved passages to every prompt, so capacity should allow several thousand tokens per question. Requests above the limit return HTTP 429; increase capacity with `.\setup-azure.ps1 -Capacity <n>`, within the subscription's quota.
+- **Rate limits.** The model deployment's capacity is expressed in thousands of tokens per minute. File search adds retrieved passages to every prompt, so capacity should allow several thousand tokens per question. Requests above the limit return HTTP 429; increase capacity with `.\setup-azure.ps1 -Capacity <n>` or `.\infra\deploy.ps1 -Capacity <n>`, within the subscription's quota.
 - **Cost.** The Foundry resource has no idle cost. Charges accrue per model token and for vector store storage.
 - **Teardown.** `az group delete -n rg-gc-pay-agent --yes --no-wait` removes all resources. Foundry resources are soft-deleted; to reprovision with the same name before the retention period ends, purge it first with `az cognitiveservices account purge -l <region> -g rg-gc-pay-agent -n <resource-name>`.
 
@@ -325,9 +355,10 @@ Generated at runtime and not committed: `docs/` (cleaned agreements), `raw/` (op
 
 | Symptom | Resolution |
 | --- | --- |
-| PowerShell reports that scripts are disabled or not digitally signed | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then `Unblock-File .\setup-azure.ps1` |
+| PowerShell reports that scripts are disabled or not digitally signed | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then `Unblock-File .\setup-azure.ps1` (and `.\infra\deploy.ps1`) |
 | `get_agreements.py` times out | Save each agreement page from a browser as HTML to `raw/<code>.html` (for example `raw/pa.html`) and rerun |
-| `Missing PROJECT_ENDPOINT` | Run `setup-azure.ps1` to completion; it writes `.env` |
+| `Missing PROJECT_ENDPOINT` | Run `setup-azure.ps1` or `infra/deploy.ps1` to completion; either writes `.env` |
+| Bicep deployment fails with `RoleAssignmentExists` | The principal already holds the role under a different assignment. `infra/deploy.ps1` checks for this; when deploying `main.bicep` directly, add `assignRole=false` |
 | HTTP 401 or 403 | Role assignments can take a few minutes to propagate; retry. Confirm the Foundry User role on the project. |
 | HTTP 404, agent not found | Run `create_agent.py` before `ask.py` |
 | HTTP 429, rate limit exceeded | Increase the deployment's capacity (see [Operations](#operations)) |
