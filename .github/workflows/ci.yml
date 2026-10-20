@@ -1,0 +1,28 @@
+# Quick checks on every push and pull request. No Azure access needed.
+# The evaluation run against the live agent is added later (Phase 4).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt ruff
+
+      - name: Check Python for syntax errors and undefined names
+        run: ruff check --select E9,F63,F7,F82 .
+
+      - name: Check the evaluation set is well-formed
+        run: python eval/check_questions.py

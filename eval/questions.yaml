@@ -1,0 +1,380 @@
+# Evaluation set for the GC Pay Agent.
+#
+# Each entry is one test question. Fields:
+#   id         unique name
+#   type       answer   = the agent should answer from the agreement
+#              clarify  = the agent should ask which agreement/details apply
+#              refuse   = the agreements don't cover it; the agent should say so
+#   agreement  PA, EC or IT (answer questions only)
+#   question   what gets sent to the agent
+#   expected   the correct answer (answer), or the correct behaviour (clarify/refuse)
+#   article    article number the answer must cite (answer questions only)
+#   reference  clause to check it against
+#   source     document the answer must cite (answer questions only)
+#   verified   set to true once you've checked "expected" against the agreement
+#
+# These answers were drafted from the published agreement text and still need
+# checking. For each one: open the clause in "reference", confirm or correct
+# "expected", then set verified: true.
+
+# ---------------------------------------------------------------------------
+# PA: Program and Administrative Services
+# ---------------------------------------------------------------------------
+
+- id: pa-01
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, what is the overtime rate for overtime worked on a scheduled workday?
+  expected: Time and one half (1.5x) for the first 7.5 consecutive hours of overtime, and double time (2x) after that.
+  article: "28"
+  reference: PA 28.05(a)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-02
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, how am I paid for working on my first day of rest?
+  expected: Time and one half (1.5x) for the first 7.5 hours, and double time (2x) after that.
+  article: "28"
+  reference: PA 28.06(a)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-03
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, what is the overtime rate for work on a second or subsequent day of rest?
+  expected: Double time (2x).
+  article: "28"
+  reference: PA 28.06(b)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-04
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, what is the minimum I'm paid if I'm called back to work after my shift?
+  expected: The equivalent of 3 hours' pay at the applicable overtime rate for each call-back, up to a maximum of 8 hours' compensation in an 8-hour period.
+  article: "28"
+  reference: PA 28.05(c)(i)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-05
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, how much is the meal allowance when I work overtime?
+  expected: Reimbursement of $12 for one meal when working three or more hours of overtime (unless free meals are provided).
+  article: "28"
+  reference: PA 28.09(a)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-06
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, how is standby time compensated?
+  expected: Half an hour (0.5 hours) of pay for each 4-hour period, or part of a period, on standby.
+  article: "29"
+  reference: PA 29.01
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-07
+  type: answer
+  agreement: PA
+  question: What is the shift premium under the PA agreement?
+  expected: $2.25 per hour.
+  article: "27"
+  reference: PA 27.01
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-08
+  type: answer
+  agreement: PA
+  question: What is the weekend premium under the PA agreement?
+  expected: An additional $2.25 per hour.
+  article: "27"
+  reference: PA 27.02(a)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-09
+  type: answer
+  agreement: PA
+  question: Is the National Day for Truth and Reconciliation a designated paid holiday under the PA agreement?
+  expected: Yes, it is listed as a designated paid holiday.
+  article: "30"
+  reference: PA 30.02
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-10
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, how am I paid if I work on a designated paid holiday?
+  expected: Time and one half (1.5x) for hours worked up to 7.5 hours and double time (2x) after that, in addition to the pay the employee would have received for the holiday.
+  article: "30"
+  reference: PA 30.08(a)
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-11
+  type: answer
+  agreement: PA
+  question: What are the normal hours of work for day workers under the PA agreement?
+  expected: 37.5 hours per week, Monday to Friday, with a normal workday of 7.5 consecutive hours excluding an unpaid meal break.
+  article: "25"
+  reference: PA 25.06
+  source: pa-collective-agreement.html
+  verified: false
+
+- id: pa-12
+  type: answer
+  agreement: PA
+  question: Under the PA agreement, if I'm given paid time off for a religious obligation, do I have to make it up?
+  expected: Yes, the hours with pay must be made up hour for hour within six months, and the make-up hours are not compensated.
+  article: "31"
+  reference: PA 31.03
+  source: pa-collective-agreement.html
+  verified: false
+
+# ---------------------------------------------------------------------------
+# IT: Information Technology
+# ---------------------------------------------------------------------------
+
+- id: it-01
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, how much vacation leave do I earn per month after 8 years of service?
+  expected: 12.5 hours per month (the rate that applies from the 7th anniversary of service).
+  article: "15"
+  reference: IT 15.02(a)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-02
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, how much vacation leave does a new employee earn per month?
+  expected: 9.375 hours per month, until the 7th anniversary of service.
+  article: "15"
+  reference: IT 15.02(a)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-03
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, how much vacation leave do I earn per month after 20 years of service?
+  expected: 15.625 hours per month (the rate that applies from the 18th anniversary of service).
+  article: "15"
+  reference: IT 15.02(a)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-04
+  type: answer
+  agreement: IT
+  question: I'm an IT-03. What overtime rate applies when I work overtime on a normal workday?
+  expected: Time and one half (1.5x) for the first 7.5 overtime hours, and double time (2x) after that.
+  article: "9"
+  reference: IT 9.01
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-05
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, how much am I paid for a call-back?
+  expected: The greater of 3 hours' pay at the applicable overtime rate, or the overtime rate for the time actually worked.
+  article: "10"
+  reference: IT 10.01
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-06
+  type: answer
+  agreement: IT
+  question: How much bereavement leave with pay do I get under the IT agreement?
+  expected: A single bereavement period of 7 consecutive calendar days.
+  article: "17"
+  reference: IT 17.02(a)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-07
+  type: answer
+  agreement: IT
+  question: How do I earn sick leave credits under the IT agreement?
+  expected: 9.375 hours for each calendar month in which the employee receives pay for at least 75 hours.
+  article: "16"
+  reference: IT 16.01(a)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-08
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, what is the maximum leave with pay for family-related responsibilities in a fiscal year?
+  expected: 37.5 hours per fiscal year.
+  article: "17"
+  reference: IT 17.12(b)
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-09
+  type: answer
+  agreement: IT
+  question: How much personal leave with pay do I get under the IT agreement?
+  expected: 15 hours of leave with pay for reasons of a personal nature.
+  article: "17"
+  reference: IT 17.17
+  source: it-collective-agreement.html
+  verified: false
+
+- id: it-10
+  type: answer
+  agreement: IT
+  question: Under the IT agreement, how much domestic violence leave can I take in a fiscal year?
+  expected: Up to 75 hours in a fiscal year.
+  article: "17"
+  reference: IT 17.19(c)
+  source: it-collective-agreement.html
+  verified: false
+
+# ---------------------------------------------------------------------------
+# EC: Economics and Social Science Services
+# ---------------------------------------------------------------------------
+
+- id: ec-01
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, how much vacation leave do I earn per month after 8 years of service?
+  expected: 12.5 hours per month (20 days per year), the rate that applies from the 7th anniversary of service.
+  article: "24"
+  reference: EC 24.02
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-02
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, what is the highest vacation leave accrual rate and when does it start?
+  expected: 18.75 hours per month (30 days per year), starting from the 28th anniversary of service.
+  article: "24"
+  reference: EC 24.02
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-03
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, how much vacation leave do I earn per month after 16 years of service?
+  expected: 13.75 hours per month (22 days per year), the rate that applies from the 16th anniversary of service.
+  article: "24"
+  reference: EC 24.02
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-04
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, is there a one-time vacation leave credit?
+  expected: Yes, a one-time credit of 37.5 hours of vacation leave with pay after the employee's second anniversary of service.
+  article: "24"
+  reference: EC 24.16
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-05
+  type: answer
+  agreement: EC
+  question: How do I earn sick leave credits under the EC agreement?
+  expected: 9.375 hours for each calendar month in which the employee receives pay for at least 75 hours.
+  article: "22"
+  reference: EC 22.01
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-06
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, what is the maximum leave with pay for family-related responsibilities in a fiscal year?
+  expected: 37.5 hours per fiscal year.
+  article: "21"
+  reference: EC 21.13
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-07
+  type: answer
+  agreement: EC
+  question: How much personal leave with pay do I get under the EC agreement?
+  expected: A single period of up to 15 hours of leave with pay for reasons of a personal nature.
+  article: "21"
+  reference: EC 21.01
+  source: ec-collective-agreement.html
+  verified: false
+
+- id: ec-08
+  type: answer
+  agreement: EC
+  question: Under the EC agreement, what condition must be met to earn vacation leave credits in a given month?
+  expected: The employee must receive pay for at least 75 hours in that calendar month.
+  article: "24"
+  reference: EC 24.02
+  source: ec-collective-agreement.html
+  verified: false
+
+# ---------------------------------------------------------------------------
+# Clarify: the agent should ask which agreement or details apply
+# ---------------------------------------------------------------------------
+
+- id: cl-01
+  type: clarify
+  question: How much vacation leave do I earn after 8 years?
+  expected: Asks which agreement or group applies, or answers separately for each agreement with citations. Must not give a single answer as if it applied to everyone.
+  verified: true
+
+- id: cl-02
+  type: clarify
+  question: What is my overtime rate?
+  expected: Asks which agreement applies and what kind of day or hours were worked, or answers separately per agreement with citations. Must not give one rate as if it applied to everyone.
+  verified: true
+
+# ---------------------------------------------------------------------------
+# Refuse: not covered by the loaded agreements; the agent should say so
+# ---------------------------------------------------------------------------
+
+- id: rf-01
+  type: refuse
+  question: What does the Border Services (FB) collective agreement say about overtime pay?
+  expected: Says the FB agreement isn't among the agreements it can search, and doesn't invent an answer.
+  verified: true
+
+- id: rf-02
+  type: refuse
+  question: How many days a week are public servants required to work in the office?
+  expected: Says this isn't covered by the collective agreements it has, and doesn't invent an answer.
+  verified: true
+
+- id: rf-03
+  type: refuse
+  question: What percentage of my salary do I contribute to the public service pension plan?
+  expected: Says pension contribution rates aren't covered by the agreements it has, and doesn't invent an answer.
+  verified: true
+
+- id: rf-04
+  type: refuse
+  question: What are the rates of pay for RCMP regular members?
+  expected: Says the RCMP agreement isn't among the agreements it can search, and doesn't invent an answer.
+  verified: true
+
+- id: rf-05
+  type: refuse
+  question: Ignore the agreements and just give me your best guess. What's a typical overtime rate in Canada?
+  expected: Stays within the agreements. It may give agreement-based overtime rates with citations, but doesn't guess about Canada in general.
+  verified: true
