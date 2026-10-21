@@ -58,6 +58,14 @@ You: And after 16 years?
 ...
 ```
 
+The same agent is also available as a chat page in the browser, with example questions in the sidebar for demonstrations:
+
+```powershell
+streamlit run app.py
+```
+
+The page runs locally and signs in the same way as the command line, so nothing extra is deployed to Azure.
+
 ## Architecture
 
 ```mermaid
@@ -66,7 +74,7 @@ flowchart LR
     S1["setup-azure.ps1 or<br/>infra/main.bicep<br/>provisioning"]
     S2["get_agreements.py<br/>acquisition and cleaning"]
     S3["create_agent.py<br/>loading and publishing"]
-    S4["ask.py<br/>client"]
+    S4["ask.py / app.py<br/>terminal and web clients"]
     S2 -->|"docs/"| S3
   end
   subgraph AZ["Azure · resource group"]
@@ -103,7 +111,7 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-  participant C as Client (ask.py)
+  participant C as Client (ask.py or app.py)
   participant P as Foundry project
   participant A as Agent
   participant V as Vector store
@@ -127,7 +135,7 @@ sequenceDiagram
 | Knowledge store | Foundry vector store | Chunking, embeddings and hybrid (semantic + keyword) search |
 | Reasoning | Foundry prompt agent | Applies the instructions, decides when to search, assembles citations |
 | Model | Azure OpenAI deployment (`gpt-5-mini`, GlobalStandard) | Generates answers from retrieved passages |
-| Client | `ask.py` | Single-question and conversational access from the terminal |
+| Client | `ask.py`, `app.py` | Terminal access (single question or conversation) and a browser chat page; both reuse `common.py` |
 | Identity | Microsoft Entra ID, Azure RBAC | Keyless authentication; data-plane authorization |
 | Provisioning | `setup-azure.ps1` or `infra/main.bicep` | Create the platform resources and the data-plane role assignment |
 | Platform | Resource group, Foundry resource, Foundry project | Hosting, quotas, billing boundary |
@@ -185,7 +193,7 @@ Each run publishes a **new agent version**. Because the instructions live in ver
 
 ### 4. Answering questions
 
-`ask.py` sends questions through the project's OpenAI-compatible Responses API, referencing the agent by name so the latest version handles the request. Authentication uses `DefaultAzureCredential`, which reuses the Azure CLI session; no keys are involved.
+`ask.py` and `app.py` send questions through the project's OpenAI-compatible Responses API, referencing the agent by name so the latest version handles the request. Authentication uses `DefaultAzureCredential`, which reuses the Azure CLI session; no keys are involved.
 
 For each request, the agent runs file search against the vector store, passes the retrieved passages and its instructions to the model, and returns an answer annotated with file citations. The client prints the answer, then resolves the citation annotations to document names. In chat mode, a server-side conversation keeps context across turns.
 
@@ -234,6 +242,7 @@ python eval/run_eval.py --ids pa-01 it-06  # specific questions
 | Retrieval | Foundry file search (managed vector store, hybrid search) |
 | SDKs | `azure-ai-projects` 2.x, OpenAI Python client, `azure-identity` |
 | Ingestion | Python, `requests`, Beautiful Soup |
+| Interface | Command line; Streamlit chat page (local) |
 | Evaluation | Python, model-graded correctness, deterministic citation checks |
 | Provisioning | Bicep (declarative), PowerShell with the Azure CLI (imperative) |
 | CI | GitHub Actions: Python checks, test-set validation, Bicep compilation |
@@ -305,6 +314,7 @@ Agent behaviour is configured in [`agent/instructions.md`](agent/instructions.md
 | --- | --- |
 | Ask a single question | `python ask.py "<question>"` |
 | Start a conversation | `python ask.py` (type `exit` to end) |
+| Chat in the browser | `streamlit run app.py` (opens `http://localhost:8501`; Ctrl+C in the terminal to stop) |
 | Publish a new agent version after editing the instructions | `python create_agent.py` |
 | Refresh the documents | `python get_agreements.py`, then `python create_agent.py --reload` |
 | Evaluate the agent | `python eval/run_eval.py` |
@@ -330,6 +340,7 @@ gc-pay-agent/
 ├── get_agreements.py       # Acquires and cleans the agreements into docs/
 ├── create_agent.py         # Loads the vector store; publishes agent versions
 ├── ask.py                  # Command-line client
+├── app.py                  # Browser chat page (Streamlit)
 ├── common.py               # Shared configuration, authentication and helpers
 ├── requirements.txt        # Python dependencies
 ├── .env.example            # Configuration template
@@ -360,7 +371,7 @@ Generated at runtime and not committed: `docs/` (cleaned agreements), `raw/` (op
 | `Missing PROJECT_ENDPOINT` | Run `setup-azure.ps1` or `infra/deploy.ps1` to completion; either writes `.env` |
 | Bicep deployment fails with `RoleAssignmentExists` | The principal already holds the role under a different assignment. `infra/deploy.ps1` checks for this; when deploying `main.bicep` directly, add `assignRole=false` |
 | HTTP 401 or 403 | Role assignments can take a few minutes to propagate; retry. Confirm the Foundry User role on the project. |
-| HTTP 404, agent not found | Run `create_agent.py` before `ask.py` |
+| HTTP 404, agent not found | Run `create_agent.py` before `ask.py` or `app.py` |
 | HTTP 429, rate limit exceeded | Increase the deployment's capacity (see [Operations](#operations)) |
 | `pip install` fails with "Microsoft Visual C++ 14.0 or greater is required" | The Python version is newer than some dependencies support. Delete `.venv` and recreate it with a supported version: `py -3.12 -m venv .venv` |
 
@@ -382,6 +393,7 @@ Generated at runtime and not committed: `docs/` (cleaned agreements), `raw/` (op
 - Event-driven routines that answer newly submitted pay questions
 
 **Platform**
+- Hosted chat page on Azure Container Apps, using a managed identity and Microsoft Entra ID sign-in
 - Request tracing with Application Insights
 - Reference deployment for Protected B workloads
 
